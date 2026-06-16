@@ -1,0 +1,54 @@
+from flask import Flask, request, jsonify, render_template
+import os
+
+app = Flask(__name__)
+FILE = "tasks.txt"
+
+def load_tasks():
+    tasks = []
+    if not os.path.exists(FILE):
+        return tasks
+    with open(FILE, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split(";")
+            if len(parts) == 4:
+                tasks.append({
+                    "id": parts[0],
+                    "title": parts[1],
+                    "type": parts[2],
+                    "date": parts[3]
+                })
+    return tasks
+
+def save_tasks(tasks):
+    with open(FILE, "w", encoding="utf-8") as f:
+        for t in tasks:
+            f.write(f"{t['id']};{t['title']};{t['type']};{t['date']}\n")
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route("/api/tasks", methods=["GET"])
+def get_tasks():
+    return jsonify(load_tasks())
+
+@app.route("/api/tasks", methods=["POST"])
+def add_task():
+    data = request.json
+    tasks = load_tasks()
+    new_id = str(len(tasks) + 1)
+    tasks.append({
+        "id": new_id,
+        "title": data["title"],
+        "type": data["type"],
+        "date": data["date"]
+    })
+    save_tasks(tasks)
+    return jsonify({"status": "ok", "id": new_id})
+
+if __name__ == "__main__":
+    app.run(debug=True)
